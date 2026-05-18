@@ -1,0 +1,173 @@
+# One-Command Install And Run With Online Lookup
+
+Use this guide if you want to download, install, and run Media-Prep-N-Sort from PowerShell with online metadata lookup enabled.
+
+Online lookup helps the script suggest better folder names, categories, and genres by using public metadata sources. It uses Wikidata for movies, TVmaze for TV shows, MusicBrainz for music, and Open Library for books. No API key is required.
+
+## Step 1: Open PowerShell
+
+Open the Windows Start Menu, search for `PowerShell`, and open Windows PowerShell.
+
+## Step 2: Copy And Paste The One-Line Command
+
+Copy this entire command, paste it into PowerShell, and press Enter:
+
+```powershell
+$ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $choice=Read-Host 'Where do you want to install Media-Prep-N-Sort? Press Enter for Desktop'; if ([string]::IsNullOrWhiteSpace($choice)) { $choice=[Environment]::GetFolderPath('Desktop') }; $choice=$choice.Trim().Trim('"'); $d=Join-Path $choice 'Media-Prep-N-Sort'; Write-Host ""; Write-Host "Install folder: $d"; $ok=Read-Host 'Are you sure? Type Y to download and run Media-Prep-N-Sort here'; if ($ok -in @('Y','y','YES','yes')) { New-Item -ItemType Directory -Force -Path $d | Out-Null; $base='https://raw.githubusercontent.com/hd9fxt7plq24vm6kcjxq2rw58y3z-cmyk/Media-Prep-N-Sort/main'; Invoke-WebRequest -UseBasicParsing -Uri "$base/MediaPrepNSort.ps1" -OutFile (Join-Path $d 'MediaPrepNSort.ps1'); Invoke-WebRequest -UseBasicParsing -Uri "$base/RUN_MEDIA_PREP_N_SORT.txt" -OutFile (Join-Path $d 'RUN_MEDIA_PREP_N_SORT.txt'); powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $d 'MediaPrepNSort.ps1') -OnlineLookup } else { Write-Host 'Install cancelled. Nothing was downloaded.' }
+```
+
+## Step 3: Choose Where To Install Media-Prep-N-Sort
+
+PowerShell will ask:
+
+```text
+Where do you want to install Media-Prep-N-Sort? Press Enter for Desktop
+```
+
+If you press Enter without typing anything, Media-Prep-N-Sort installs to your Desktop.
+
+If you want to install it somewhere else, paste a folder path and press Enter.
+
+Example:
+
+```text
+D:\Tools
+```
+
+The installer creates a folder named:
+
+```text
+Media-Prep-N-Sort
+```
+
+Everything downloaded by the command goes inside that folder.
+
+## Step 4: Confirm The Install Location
+
+PowerShell will show the final install folder and ask:
+
+```text
+Are you sure? Type Y to download and run Media-Prep-N-Sort here
+```
+
+Type:
+
+```text
+Y
+```
+
+Then press Enter.
+
+If you type anything else, the install is cancelled and nothing is downloaded.
+
+## Step 5: Enter Your Media Folder
+
+After the script starts, it will ask:
+
+```text
+Where is your media folder?
+```
+
+To copy your media folder path, open your media folder in File Explorer, click the address bar at the top, press `Ctrl+C`, go back to PowerShell, press `Ctrl+V` or right-click to paste, and then press Enter.
+
+Example folder path format:
+
+```text
+D:\My Media Folder
+```
+
+## Step 6: Review The Script Suggestions
+
+The script scans only the top-level folders inside your media folder.
+
+It can suggest a category, a cleaner folder name, a genre for music or books, an online metadata match, and a confidence level.
+
+The script can sort into:
+
+```text
+1 = MOVIES
+2 = TV SHOWS
+3 = MUSIC
+4 = BOOKS
+```
+
+If the script is unsure, it asks you what to do. You can choose a category, accept a suggestion, type a corrected name, skip a folder, or cancel.
+
+## Step 7: Final Safety Confirmation
+
+Before anything moves, the script shows a summary.
+
+Nothing changes unless you type both confirmations exactly.
+
+First type:
+
+```text
+MOVE
+```
+
+Then type:
+
+```text
+CONFIRM
+```
+
+After `CONFIRM`, folder moves and renames begin. There is no built-in undo after that point.
+
+If you type anything else at either confirmation, the script stops safely and nothing changes.
+
+## Cancel Anytime Before Moving
+
+Before the final move starts, you can cancel at normal prompts by typing:
+
+```text
+Q
+CANCEL
+EXIT
+STOP
+```
+
+The script will quit cleanly.
+
+## What Gets Downloaded
+
+The one-line command downloads these files into the `Media-Prep-N-Sort` folder:
+
+```text
+MediaPrepNSort.ps1
+RUN_MEDIA_PREP_N_SORT.txt
+```
+
+Reports are not created by default.
+
+## How To Run It Again Later With Online Lookup
+
+Open PowerShell inside the `Media-Prep-N-Sort` folder and run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup
+```
+
+## How To Run It Again Later And Save Reports
+
+Open PowerShell inside the `Media-Prep-N-Sort` folder and run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup -SaveReports
+```
+
+## How To Preview Without Moving Anything
+
+Open PowerShell inside the `Media-Prep-N-Sort` folder and run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup -DryRun
+```
+
+## How To Remove Media-Prep-N-Sort
+
+Delete the `Media-Prep-N-Sort` folder.
+
+That removes the script, helper text file, and any optional reports saved inside that folder.
+
+It does not delete your media.
+````
