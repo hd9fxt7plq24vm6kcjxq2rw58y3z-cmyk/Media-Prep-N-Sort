@@ -1,5 +1,4 @@
 # Media-Prep-N-Sort
-# Media-Prep-N-Sort
 
 Media-Prep-N-Sort is a safe interactive PowerShell sorter for media folders. It helps organize top-level folders into Movies, TV Shows, Music, and Books without touching the files inside them.
 
