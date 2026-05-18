@@ -76,7 +76,7 @@ FINAL SAFETY CONFIRMATION
 
 The script will show a summary before changing anything.
 
-Nothing moves unless you type both confirmations exactly.
+Nothing moves unless you type both confirmations exactly in all caps.
 
 First it asks you to type:
 
@@ -85,6 +85,8 @@ MOVE
 Then it asks you to type:
 
 CONFIRM
+
+If you type move or confirm in lowercase, the script will remind you to use all caps and ask again.
 
 After CONFIRM, folder moves and renames begin.
 There is no built-in undo after that point, so review the summary carefully.

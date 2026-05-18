@@ -42,7 +42,7 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ScriptVersion = "1.2.1"
+$ScriptVersion = "1.2.2"
 $MoviesFolderName = "MOVIES"
 $ShowsFolderName = "TV SHOWS"
 $MusicFolderName = "MUSIC"
@@ -1757,10 +1757,22 @@ Write-Host "Music/book folders may be placed one level deeper into genre folders
 Write-Host "Missing category folders and standard MUSIC/BOOKS genre folders will be created during execution."
 Write-Host "Nothing inside any media, music, or book folder will be scanned, renamed, deleted, merged, or reorganized."
 Write-Warn "After the final confirmation, folder moves and renames begin. There is no built-in undo."
-Write-Host "Step 1: type MOVE to arm the execution step, or press Enter to stop without changing anything."
-$confirm = Read-LineExact "First confirmation: "
+Write-Host "Step 1: type MOVE in all caps to arm the execution step, or press Enter to stop without changing anything."
+while ($true) {
+    $confirm = Read-LineExact "First confirmation: "
+    if ($null -eq $confirm -or $confirm.Trim() -eq "") {
+        Write-Host ""
+        Write-Good "Stopped. Nothing was moved or renamed."
+        exit 0
+    }
+    if ($confirm -ceq "MOVE") {
+        break
+    }
+    if ($confirm.Trim().ToUpperInvariant() -eq "MOVE") {
+        Write-Warn "You must use all caps: MOVE"
+        continue
+    }
 
-if ($confirm -cne "MOVE") {
     Write-Host ""
     Write-Good "Stopped. Nothing was moved or renamed."
     exit 0
@@ -1768,11 +1780,23 @@ if ($confirm -cne "MOVE") {
 
 Write-Host ""
 Write-Warn "Last chance before changes begin."
-Write-Host "Type CONFIRM to permanently apply the move/rename plan now."
+Write-Host "Type CONFIRM in all caps to permanently apply the move/rename plan now."
 Write-Host "Anything else stops safely without changing anything."
-$finalConfirm = Read-LineExact "Final confirmation: "
+while ($true) {
+    $finalConfirm = Read-LineExact "Final confirmation: "
+    if ($null -eq $finalConfirm -or $finalConfirm.Trim() -eq "") {
+        Write-Host ""
+        Write-Good "Stopped. Nothing was moved or renamed."
+        exit 0
+    }
+    if ($finalConfirm -ceq "CONFIRM") {
+        break
+    }
+    if ($finalConfirm.Trim().ToUpperInvariant() -eq "CONFIRM") {
+        Write-Warn "You must use all caps: CONFIRM"
+        continue
+    }
 
-if ($finalConfirm -cne "CONFIRM") {
     Write-Host ""
     Write-Good "Stopped. Nothing was moved or renamed."
     exit 0
