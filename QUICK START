@@ -141,7 +141,19 @@ Reports are not created by default.
 
 ## How To Run It Again Later With Online Lookup
 
-Open PowerShell inside the `Media-Prep-N-Sort` folder and run:
+If you used the default Desktop install location, you can run it again from any PowerShell window with:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "$([Environment]::GetFolderPath('Desktop'))\Media-Prep-N-Sort\MediaPrepNSort.ps1" -OnlineLookup
+```
+
+If you installed it somewhere else, use this universal finder command:
+
+```powershell
+$roots=@([Environment]::GetFolderPath('Desktop'),(Join-Path $env:USERPROFILE 'Downloads'),(Get-Location).Path)|Where-Object{$_ -and (Test-Path -LiteralPath $_)}; $s=Get-ChildItem -LiteralPath $roots -Filter 'MediaPrepNSort.ps1' -Recurse -Depth 3 -ErrorAction SilentlyContinue|Select-Object -First 1 -ExpandProperty FullName; if(-not $s){$f=Read-Host 'Where is your Media-Prep-N-Sort folder?'; $s=Join-Path $f.Trim().Trim('"') 'MediaPrepNSort.ps1'}; if(Test-Path -LiteralPath $s){powershell -NoProfile -ExecutionPolicy Bypass -File $s -OnlineLookup}else{Write-Host 'Could not find MediaPrepNSort.ps1.'}
+```
+
+The shorter command below only works if PowerShell is already open inside the `Media-Prep-N-Sort` folder:
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup

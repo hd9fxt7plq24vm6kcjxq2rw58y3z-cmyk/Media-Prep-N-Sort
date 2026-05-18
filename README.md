@@ -293,13 +293,27 @@ D:\My Media Folder
 
 ## Run It Again Later
 
-After the first install, open PowerShell inside the Media-Prep-N-Sort folder and run:
+After the first install, if you used the default Desktop install location, you can run Media-Prep-N-Sort from any PowerShell window with:
+
+~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File "$([Environment]::GetFolderPath('Desktop'))\Media-Prep-N-Sort\MediaPrepNSort.ps1" -OnlineLookup
+~~~
+
+If you installed Media-Prep-N-Sort somewhere other than your Desktop, use this universal finder command. It searches a few levels under Desktop, Downloads, and your current PowerShell folder. If it still cannot find `MediaPrepNSort.ps1`, it asks where your Media-Prep-N-Sort folder is:
+
+~~~powershell
+$roots=@([Environment]::GetFolderPath('Desktop'),(Join-Path $env:USERPROFILE 'Downloads'),(Get-Location).Path)|Where-Object{$_ -and (Test-Path -LiteralPath $_)}; $s=Get-ChildItem -LiteralPath $roots -Filter 'MediaPrepNSort.ps1' -Recurse -Depth 3 -ErrorAction SilentlyContinue|Select-Object -First 1 -ExpandProperty FullName; if(-not $s){$f=Read-Host 'Where is your Media-Prep-N-Sort folder?'; $s=Join-Path $f.Trim().Trim('"') 'MediaPrepNSort.ps1'}; if(Test-Path -LiteralPath $s){powershell -NoProfile -ExecutionPolicy Bypass -File $s -OnlineLookup}else{Write-Host 'Could not find MediaPrepNSort.ps1.'}
+~~~
+
+The shorter dot-slash command below only works if PowerShell is already open inside the Media-Prep-N-Sort folder:
 
 ~~~powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1"
 ~~~
 
 ## Useful Commands
+
+The commands in this section use `.\MediaPrepNSort.ps1`, so they only work if PowerShell is already open inside the Media-Prep-N-Sort folder. If you are not inside that folder, use the from-anywhere command in the previous section.
 
 Run normally:
 
