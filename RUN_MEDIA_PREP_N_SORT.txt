@@ -46,6 +46,13 @@ Important safety rule:
 The script treats every top-level folder like a sealed box.
 It does not scan, rename, delete, merge, or reorganize anything inside those folders.
 
+Default scan behavior:
+Without -FullCheckup, the script checks only folders directly inside your selected media folder and ignores MOVIES, TV SHOWS, MUSIC, and BOOKS.
+
+Full checkup behavior:
+With -FullCheckup, the script also checks folders already inside MOVIES, TV SHOWS, MUSIC, BOOKS, and known MUSIC/BOOKS genre folders.
+It still treats each media folder as a sealed box and does not inspect media files.
+
 
 HOW TO COPY YOUR MEDIA FOLDER PATH
 ==================================
@@ -119,6 +126,10 @@ Run with online metadata suggestions:
 
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup
 
+Run a full checkup of unsorted folders plus existing category/genre folders:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup -FullCheckup
+
 Run and save reports/logs:
 
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -SaveReports
@@ -156,6 +167,14 @@ By default, reports are OFF so the folder stays clean.
 
 -DryRun
 Builds the plan and shows the summary, but does not move or rename anything.
+
+
+-FullCheckup
+Also checks folders already inside MOVIES, TV SHOWS, MUSIC, BOOKS, and known MUSIC/BOOKS genre folders.
+
+Without this flag, the script ignores those four main destination folders and only checks unsorted folders directly inside your selected media folder.
+
+This is useful after you already sorted a library and want to review names, categories, and music/book genres again.
 
 
 -NoNameReview

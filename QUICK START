@@ -82,6 +82,10 @@ The script scans only the top-level folders inside your media folder.
 
 It can suggest a category, a cleaner folder name, a genre for music or books, an online metadata match, and a confidence level.
 
+By default, it ignores the generated `MOVIES`, `TV SHOWS`, `MUSIC`, and `BOOKS` folders and checks only unsorted folders directly inside your selected media folder.
+
+If you want it to also check folders already inside those generated folders and known music/book genre folders, run it later with `-FullCheckup`.
+
 The script can sort into:
 
 ```text
@@ -157,6 +161,16 @@ The shorter command below only works if PowerShell is already open inside the `M
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup
+```
+
+## How To Run A Full Checkup Later
+
+Full checkup mode checks unsorted folders plus folders already inside `MOVIES`, `TV SHOWS`, `MUSIC`, `BOOKS`, and known `MUSIC` / `BOOKS` genre folders.
+
+Open PowerShell inside the `Media-Prep-N-Sort` folder and run:
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup -FullCheckup
 ```
 
 ## How To Run It Again Later And Save Reports

@@ -40,6 +40,25 @@ My Media Folder
 
 The script treats every top-level folder like a sealed box. It can move or rename the folder itself, but it does not scan, rename, move, delete, merge, or reorganize anything inside that folder.
 
+By default, Media-Prep-N-Sort ignores its own generated category folders:
+
+~~~text
+MOVIES
+TV SHOWS
+MUSIC
+BOOKS
+~~~
+
+That keeps normal sorting focused on unsorted folders directly inside your selected media folder.
+
+If you want the script to also check folders that are already inside those generated folders, run it with:
+
+~~~powershell
+-FullCheckup
+~~~
+
+Full checkup mode includes folders already inside `MOVIES`, `TV SHOWS`, `MUSIC`, `BOOKS`, and known `MUSIC` / `BOOKS` genre folders. It still treats each media folder as a sealed box and does not inspect media files.
+
 ## Most Important Safety Rule
 
 Media-Prep-N-Sort only works on this level:
@@ -61,6 +80,8 @@ My Media Folder\Example Music Folder\Track File.flac
 ~~~
 
 This is a top-level folder sorting tool, not a media-file renaming tool.
+
+The optional `-FullCheckup` flag expands the scan to approved organizer folders only. It can look at folder names inside `MOVIES`, `TV SHOWS`, `MUSIC`, `BOOKS`, and known `MUSIC` / `BOOKS` genre folders, but it still does not inspect media files or reorganize files inside a media folder.
 
 ## Categories
 
@@ -327,6 +348,12 @@ Run with online lookup:
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup
 ~~~
 
+Run a full checkup of unsorted folders plus existing category/genre folders:
+
+~~~powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup -FullCheckup
+~~~
+
 Run with saved reports:
 
 ~~~powershell
@@ -358,6 +385,12 @@ Saves reports and logs beside the script.
 `-DryRun`
 
 Builds the plan and shows the summary, but does not move or rename anything.
+
+`-FullCheckup`
+
+Also checks folders already inside `MOVIES`, `TV SHOWS`, `MUSIC`, `BOOKS`, and known `MUSIC` / `BOOKS` genre folders.
+
+Without this flag, the script ignores those generated destination folders and checks only unsorted folders directly inside the selected media folder.
 
 `-NoNameReview`
 

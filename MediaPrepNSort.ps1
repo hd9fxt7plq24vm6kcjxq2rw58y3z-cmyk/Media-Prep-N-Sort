@@ -25,6 +25,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -Save
 .EXAMPLE
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup
 # Use Wikidata, TVmaze, MusicBrainz, and Open Library suggestions before confirmation.
+
+.EXAMPLE
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup -FullCheckup
+# Also inspect folders already inside generated category and known genre folders.
 #>
 
 [CmdletBinding()]
@@ -36,13 +40,14 @@ param(
     [switch]$DryRun,
     [switch]$NoNameReview,
     [switch]$TrustMediumConfidence,
+    [switch]$FullCheckup,
     [switch]$NonInteractive
 )
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$ScriptVersion = "1.2.2"
+$ScriptVersion = "1.3.0"
 $MoviesFolderName = "MOVIES"
 $ShowsFolderName = "TV SHOWS"
 $MusicFolderName = "MUSIC"
@@ -105,6 +110,7 @@ function Show-Welcome {
     Write-Host "For music and books, it can create one genre folder layer such as MUSIC\Rock or BOOKS\Fantasy."
     Write-Host "If a folder is unclear, you can choose 1 for movies, 2 for TV shows, 3 for music, 4 for books, or s to skip."
     Write-Host "Optional: run with -OnlineLookup to use public metadata sources for better suggestions."
+    Write-Host "Optional: run with -FullCheckup to also inspect folders already inside MOVIES, TV SHOWS, MUSIC, BOOKS, and known genre folders."
     Write-Host "At any prompt before the final move starts, type Q, CANCEL, EXIT, or STOP to quit cleanly."
     Write-Host ""
     Write-Host "Path tip:"
@@ -1186,13 +1192,143 @@ function Get-ImmediateChildFolders {
     return @(Get-ChildItem -LiteralPath $RootPath -Directory -Force)
 }
 
+function New-IgnoredPlanItem {
+    param(
+        [string]$Name,
+        [string]$FullPath,
+        [string]$Reason,
+        [string]$Decision
+    )
+
+    return [pscustomobject]@{
+        CurrentFolderName = $Name
+        CurrentFullPath = $FullPath
+        SourceParent = ""
+        ScanScope = "ignored"
+        ProposedCategory = $Ignored
+        ProposedGenre = ""
+        ProposedPlexName = $Name
+        ProposedFinalPath = $FullPath
+        Confidence = "High"
+        Reason = $Reason
+        OnlineSource = ""
+        OnlineMatch = ""
+        WouldBeMoved = $false
+        WouldBeRenamed = $false
+        WarningOrConflict = ""
+        Conflict = $false
+        IgnoredDestination = $true
+        UserDecision = $Decision
+    }
+}
+
+function New-ScanTarget {
+    param(
+        [System.IO.DirectoryInfo]$Folder,
+        [string]$DefaultCategory = "",
+        [string]$ExistingGenre = "",
+        [string]$Scope = "Root"
+    )
+
+    return [pscustomobject]@{
+        Name = $Folder.Name
+        FullPath = $Folder.FullName
+        SourceParent = $Folder.Parent.FullName.TrimEnd("\")
+        DefaultCategory = $DefaultCategory
+        ExistingGenre = $ExistingGenre
+        Scope = $Scope
+    }
+}
+
+function Add-FullCheckupTargets {
+    param(
+        [object[]]$Targets,
+        [string]$CategoryPath,
+        [string]$Category,
+        [string[]]$GenreNames = @()
+    )
+
+    if (-not (Test-Path -LiteralPath $CategoryPath -PathType Container)) {
+        return @($Targets)
+    }
+
+    foreach ($folder in @(Get-ImmediateChildFolders -RootPath $CategoryPath)) {
+        if ($GenreNames.Count -gt 0 -and ($GenreNames -contains $folder.Name)) {
+            foreach ($genreChild in @(Get-ImmediateChildFolders -RootPath $folder.FullName)) {
+                $Targets += (New-ScanTarget -Folder $genreChild -DefaultCategory $Category -ExistingGenre $folder.Name -Scope "$Category genre: $($folder.Name)")
+            }
+        }
+        else {
+            $Targets += (New-ScanTarget -Folder $folder -DefaultCategory $Category -ExistingGenre "" -Scope $Category)
+        }
+    }
+
+    return @($Targets)
+}
+
+function Get-PlanScanTargets {
+    param(
+        [string]$RootPath,
+        [hashtable]$DestinationPaths,
+        [string]$ScriptRootFull,
+        [bool]$UseFullCheckup
+    )
+
+    $targets = @()
+    $ignored = @()
+
+    foreach ($child in @(Get-ImmediateChildFolders -RootPath $RootPath)) {
+        $childFull = [System.IO.Path]::GetFullPath($child.FullName).TrimEnd("\")
+
+        if ($DestinationFolderNames -contains $child.Name) {
+            $ignored += (New-IgnoredPlanItem -Name $child.Name -FullPath $child.FullName -Reason "Ignored destination folder." -Decision "ignored destination")
+            continue
+        }
+
+        if ($childFull -eq $ScriptRootFull) {
+            $ignored += (New-IgnoredPlanItem -Name $child.Name -FullPath $child.FullName -Reason "Ignored Media-Prep-N-Sort tool folder." -Decision "ignored tool folder")
+            continue
+        }
+
+        $targets += (New-ScanTarget -Folder $child -Scope "Root")
+    }
+
+    if ($UseFullCheckup) {
+        $targets = Add-FullCheckupTargets -Targets $targets -CategoryPath $DestinationPaths[$MoviesFolderName] -Category $MoviesFolderName
+        $targets = Add-FullCheckupTargets -Targets $targets -CategoryPath $DestinationPaths[$ShowsFolderName] -Category $ShowsFolderName
+        $targets = Add-FullCheckupTargets -Targets $targets -CategoryPath $DestinationPaths[$MusicFolderName] -Category $MusicFolderName -GenreNames $MusicGenreNames
+        $targets = Add-FullCheckupTargets -Targets $targets -CategoryPath $DestinationPaths[$BooksFolderName] -Category $BooksFolderName -GenreNames $BookGenreNames
+    }
+
+    $dedupedTargets = @()
+    $seen = @{}
+    foreach ($target in $targets) {
+        $targetFull = [System.IO.Path]::GetFullPath($target.FullPath).TrimEnd("\")
+        if ($targetFull -eq $ScriptRootFull) {
+            continue
+        }
+        if ($seen.ContainsKey($targetFull.ToLowerInvariant())) {
+            continue
+        }
+
+        $seen[$targetFull.ToLowerInvariant()] = $true
+        $dedupedTargets += $target
+    }
+
+    return [pscustomobject]@{
+        Targets = @($dedupedTargets)
+        Ignored = @($ignored)
+    }
+}
+
 function New-Plan {
     param(
         [string]$RootPath,
         [bool]$ReviewNames,
         [bool]$ReviewMediumConfidence,
         [bool]$IsNonInteractive,
-        [bool]$UseOnlineLookup
+        [bool]$UseOnlineLookup,
+        [bool]$UseFullCheckup
     )
 
     $moviesPath = Join-Path -Path $RootPath -ChildPath $MoviesFolderName
@@ -1206,57 +1342,16 @@ function New-Plan {
         $BooksFolderName = $booksPath
     }
     $scriptRootFull = [System.IO.Path]::GetFullPath($PSScriptRoot).TrimEnd("\")
-    $children = Get-ImmediateChildFolders -RootPath $RootPath
+    $scan = Get-PlanScanTargets -RootPath $RootPath -DestinationPaths $destinationPaths -ScriptRootFull $scriptRootFull -UseFullCheckup $UseFullCheckup
     $items = @()
 
-    foreach ($child in $children) {
-        $name = $child.Name
-        $fullPath = $child.FullName
-        $childFull = [System.IO.Path]::GetFullPath($fullPath).TrimEnd("\")
+    $items += @($scan.Ignored)
 
-        if ($DestinationFolderNames -contains $name) {
-            $items += [pscustomobject]@{
-                CurrentFolderName = $name
-                CurrentFullPath = $fullPath
-                ProposedCategory = $Ignored
-                ProposedGenre = ""
-                ProposedPlexName = $name
-                ProposedFinalPath = $fullPath
-                Confidence = "High"
-                Reason = "Ignored destination folder."
-                OnlineSource = ""
-                OnlineMatch = ""
-                WouldBeMoved = $false
-                WouldBeRenamed = $false
-                WarningOrConflict = ""
-                Conflict = $false
-                IgnoredDestination = $true
-                UserDecision = "ignored destination"
-            }
-            continue
-        }
-
-        if ($childFull -eq $scriptRootFull) {
-            $items += [pscustomobject]@{
-                CurrentFolderName = $name
-                CurrentFullPath = $fullPath
-                ProposedCategory = $Ignored
-                ProposedGenre = ""
-                ProposedPlexName = $name
-                ProposedFinalPath = $fullPath
-                Confidence = "High"
-                Reason = "Ignored Media-Prep-N-Sort tool folder."
-                OnlineSource = ""
-                OnlineMatch = ""
-                WouldBeMoved = $false
-                WouldBeRenamed = $false
-                WarningOrConflict = ""
-                Conflict = $false
-                IgnoredDestination = $true
-                UserDecision = "ignored tool folder"
-            }
-            continue
-        }
+    foreach ($target in $scan.Targets) {
+        $name = $target.Name
+        $fullPath = $target.FullPath
+        $sourceParent = $target.SourceParent
+        $scanScope = $target.Scope
 
         $classification = Get-Classification -FolderName $name
         $category = $classification.Category
@@ -1268,6 +1363,26 @@ function New-Plan {
         $onlineGenre = ""
         $onlineSource = ""
         $onlineMatch = ""
+
+        if ($DestinationFolderNames -contains $target.DefaultCategory) {
+            $defaultCategory = $target.DefaultCategory
+            if (($DestinationFolderNames -contains $classification.Category) -and
+                ($classification.Confidence -eq "High") -and
+                ($classification.Category -ne $defaultCategory)) {
+                $category = $classification.Category
+                $confidence = "Low"
+                $reason = "Full checkup found a mismatch: folder is currently under $defaultCategory, but the name suggests $($classification.Category)."
+                $needsReview = $true
+                $decision = "full checkup mismatch"
+            }
+            else {
+                $category = $defaultCategory
+                $confidence = "Existing"
+                $reason = "Full checkup is using the existing $defaultCategory location as the safe default."
+                $needsReview = $false
+                $decision = "existing location"
+            }
+        }
 
         if ($confidence -eq "Medium" -and -not $ReviewMediumConfidence) {
             $needsReview = $false
@@ -1316,6 +1431,8 @@ function New-Plan {
             $items += [pscustomobject]@{
                 CurrentFolderName = $name
                 CurrentFullPath = $fullPath
+                SourceParent = $sourceParent
+                ScanScope = $scanScope
                 ProposedCategory = $ManualReview
                 ProposedGenre = ""
                 ProposedPlexName = Get-ProposedName -FolderName $name -Category $ManualReview
@@ -1357,6 +1474,8 @@ function New-Plan {
             $items += [pscustomobject]@{
                 CurrentFolderName = $name
                 CurrentFullPath = $fullPath
+                SourceParent = $sourceParent
+                ScanScope = $scanScope
                 ProposedCategory = $category
                 ProposedGenre = ""
                 ProposedPlexName = $proposedName
@@ -1381,6 +1500,9 @@ function New-Plan {
             if (-not [string]::IsNullOrWhiteSpace($onlineGenre) -and $onlineGenre -ne "Other") {
                 $genreName = $onlineGenre
             }
+            elseif (-not [string]::IsNullOrWhiteSpace($target.ExistingGenre)) {
+                $genreName = $target.ExistingGenre
+            }
             else {
                 $genreName = Get-GenreSuggestion -FolderName $name -Category $category
             }
@@ -1397,10 +1519,17 @@ function New-Plan {
         }
 
         $finalPath = Join-Path -Path $targetBase -ChildPath $proposedName
+        $currentFullForPlan = [System.IO.Path]::GetFullPath($fullPath).TrimEnd("\")
+        $finalFullForPlan = [System.IO.Path]::GetFullPath($finalPath).TrimEnd("\")
+        $wouldBeMoved = ($currentFullForPlan -ne $finalFullForPlan)
+        $wouldBeRenamed = ((Split-Path -Path $fullPath -Leaf) -cne (Split-Path -Path $finalPath -Leaf))
+        $initialWarning = if ($wouldBeMoved) { "" } else { "Already in the planned location with the planned name." }
 
         $items += [pscustomobject]@{
             CurrentFolderName = $name
             CurrentFullPath = $fullPath
+            SourceParent = $sourceParent
+            ScanScope = $scanScope
             ProposedCategory = $category
             ProposedGenre = $genreName
             ProposedPlexName = $proposedName
@@ -1409,9 +1538,9 @@ function New-Plan {
             Reason = $reason
             OnlineSource = $onlineSource
             OnlineMatch = $onlineMatch
-            WouldBeMoved = $true
-            WouldBeRenamed = ($proposedName -cne $name)
-            WarningOrConflict = ""
+            WouldBeMoved = $wouldBeMoved
+            WouldBeRenamed = $wouldBeRenamed
+            WarningOrConflict = $initialWarning
             Conflict = $false
             IgnoredDestination = $false
             UserDecision = $nameDecision.Source
@@ -1442,15 +1571,24 @@ function New-Plan {
         $item.WarningOrConflict = ($warnings -join " ")
     }
 
+    $scanMode = if ($UseFullCheckup) { "Full checkup" } else { "Default" }
+    $safetyText = if ($UseFullCheckup) {
+        "Full checkup mode. Scans unsorted root folders plus folders already inside MOVIES, TV SHOWS, MUSIC, BOOKS, and known MUSIC/BOOKS genre folders. No media files are inspected."
+    }
+    else {
+        "Default mode. Immediate child folders only. Destination folders are ignored. No recursive scan. No nested files or folders inspected."
+    }
+
     return [pscustomobject]@{
         GeneratedAt = (Get-Date).ToString("o")
         Version = $ScriptVersion
         Root = $RootPath
+        ScanMode = $scanMode
         MoviesDestination = $moviesPath
         TvShowsDestination = $showsPath
         MusicDestination = $musicPath
         BooksDestination = $booksPath
-        Safety = "Immediate child folders only. No recursive scan. No nested files or folders inspected."
+        Safety = $safetyText
         Items = @($items)
     }
 }
@@ -1490,6 +1628,7 @@ function Write-PlanReports {
     $lines += "Generated: $($Plan.GeneratedAt)"
     $lines += "Version: $($Plan.Version)"
     $lines += "Root: $($Plan.Root)"
+    $lines += "Scan mode: $($Plan.ScanMode)"
     $lines += "Safety: $($Plan.Safety)"
     $lines += ""
     $lines += "No folders have been moved yet unless the final MOVE and CONFIRM confirmations were entered."
@@ -1512,6 +1651,7 @@ function Write-PlanReports {
         $lines += ""
         $lines += "Current folder name: $($item.CurrentFolderName)"
         $lines += "Current full path: $($item.CurrentFullPath)"
+        $lines += "Scan scope: $($item.ScanScope)"
         $lines += "Proposed category: $($item.ProposedCategory)"
         $lines += "Proposed genre: $($item.ProposedGenre)"
         $lines += "Proposed clean top-level folder name: $($item.ProposedPlexName)"
@@ -1584,8 +1724,14 @@ function Invoke-MovePlan {
                 }
 
                 $sourceParent = [System.IO.Directory]::GetParent($item.CurrentFullPath).FullName.TrimEnd("\")
-                if ($sourceParent -ne $rootFull) {
-                    throw "Source is not an immediate child of the root."
+                $allowedSourceParent = if (-not [string]::IsNullOrWhiteSpace($item.SourceParent)) {
+                    [System.IO.Path]::GetFullPath($item.SourceParent).TrimEnd("\")
+                }
+                else {
+                    $rootFull
+                }
+                if ($sourceParent -ne $allowedSourceParent) {
+                    throw "Source is not in the approved scan location from the plan."
                 }
 
                 $sourceFull = [System.IO.Path]::GetFullPath($item.CurrentFullPath).TrimEnd("\")
@@ -1629,7 +1775,8 @@ function Invoke-MovePlan {
         $lines += "MEDIA-PREP-N-SORT EXECUTION REPORT"
         $lines += "Generated: $((Get-Date).ToString("o"))"
         $lines += "Root: $RootPath"
-        $lines += "Safety: Immediate child folders only. No recursive scan. No nested files or folders inspected."
+        $lines += "Scan mode: $($Plan.ScanMode)"
+        $lines += "Safety: $($Plan.Safety)"
         $lines += ""
 
         foreach ($result in $results) {
@@ -1698,7 +1845,7 @@ if (-not $NoNameReview -and -not $NonInteractive) {
     $reviewNames = Prompt-YesNo -Question "Review and fix proposed folder names before moving?" -DefaultYes $true
 }
 
-$plan = New-Plan -RootPath $rootPath -ReviewNames $reviewNames -ReviewMediumConfidence $reviewMedium -IsNonInteractive ([bool]$NonInteractive) -UseOnlineLookup ([bool]$OnlineLookup)
+$plan = New-Plan -RootPath $rootPath -ReviewNames $reviewNames -ReviewMediumConfidence $reviewMedium -IsNonInteractive ([bool]$NonInteractive) -UseOnlineLookup ([bool]$OnlineLookup) -UseFullCheckup ([bool]$FullCheckup)
 $summary = Get-Summary -Items $plan.Items
 $reports = $null
 if ($SaveReports) {
@@ -1710,6 +1857,9 @@ Write-Good "Plan complete."
 if ($OnlineLookup) {
     Write-Host "Online lookup was enabled. Any accepted metadata suggestions are included in the plan."
 }
+if ($FullCheckup) {
+    Write-Host "Full checkup was enabled. Existing category folders and known MUSIC/BOOKS genre folders were included in the scan."
+}
 if ($SaveReports) {
     Write-Host "Plan report: $($reports.TextReport)"
     Write-Host "JSON plan:   $($reports.JsonPlan)"
@@ -1720,7 +1870,7 @@ else {
 }
 Write-Host ""
 Write-Host "Summary:"
-Write-Host "  Total immediate folders: $($summary.TotalImmediateFolders)"
+Write-Host "  Total checked folders: $($summary.TotalImmediateFolders)"
 Write-Host "  Ignored destination folders: $($summary.IgnoredDestinations)"
 Write-Host "  Movies: $($summary.Movies)"
 Write-Host "  TV shows: $($summary.TvShows)"
@@ -1751,8 +1901,16 @@ if ($summary.WillMove -eq 0) {
 
 Write-Host ""
 Write-Warn "Final safety check"
-Write-Host "Only immediate child folders of this root will be moved:"
+if ($FullCheckup) {
+    Write-Host "Only folders included in the approved full-checkup scan will be moved:"
+}
+else {
+    Write-Host "Only immediate child folders of this root will be moved:"
+}
 Write-Host "  $rootPath"
+if ($FullCheckup) {
+    Write-Host "Full checkup may also move or rename folders already inside MOVIES, TV SHOWS, MUSIC, BOOKS, or known genre folders."
+}
 Write-Host "Music/book folders may be placed one level deeper into genre folders."
 Write-Host "Missing category folders and standard MUSIC/BOOKS genre folders will be created during execution."
 Write-Host "Nothing inside any media, music, or book folder will be scanned, renamed, deleted, merged, or reorganized."
