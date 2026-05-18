@@ -1,0 +1,206 @@
+MEDIA-PREP-N-SORT - QUICK START
+===============================
+
+This folder contains the Media-Prep-N-Sort PowerShell script.
+
+Thank you for installing Media-Prep-N-Sort.
+I hope it saves you some time and makes your media folder feel a little less feral.
+
+To run it again, open PowerShell in this Media-Prep-N-Sort folder and run:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1"
+
+
+WHAT IT DOES
+============
+
+Media-Prep-N-Sort organizes only the top-level folders inside a media/downloads folder.
+
+It can sort folders into:
+
+1 = MOVIES
+2 = TV SHOWS
+3 = MUSIC
+4 = BOOKS
+
+For MUSIC and BOOKS, it can also place folders one level deeper into genre folders.
+
+Examples:
+
+MOVIES\Blade Runner 2049 (2017)
+TV SHOWS\Adventure Time (2010)
+MUSIC\Rock\Artist - Album
+BOOKS\Fantasy\Author - Book Title
+
+Important safety rule:
+The script treats every top-level folder like a sealed box.
+It does not scan, rename, delete, merge, or reorganize anything inside those folders.
+
+
+HOW TO COPY YOUR MEDIA FOLDER PATH
+==================================
+
+When the script asks:
+
+Where is your media folder?
+
+Do this:
+
+1. Open your media folder in File Explorer.
+2. Click the address bar at the top of File Explorer.
+3. Press Ctrl+C to copy the folder path.
+4. Go back to PowerShell.
+5. Press Ctrl+V or right-click to paste the path.
+6. Press Enter.
+
+Example path:
+
+Z:\Media\Completed Downloads
+
+
+CANCEL ANY TIME
+===============
+
+At any normal prompt before the final move starts, you can type:
+
+Q
+CANCEL
+EXIT
+STOP
+
+The script will quit cleanly and nothing will be moved or renamed.
+
+
+FINAL SAFETY CONFIRMATION
+=========================
+
+The script will show a summary before changing anything.
+
+Nothing moves unless you type both confirmations exactly.
+
+First it asks you to type:
+
+MOVE
+
+Then it asks you to type:
+
+CONFIRM
+
+After CONFIRM, folder moves and renames begin.
+There is no built-in undo after that point, so review the summary carefully.
+
+If you press Enter or type anything else at either confirmation, the script stops and nothing changes.
+
+
+COMMON COMMANDS
+===============
+
+Run normally:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1"
+
+Run with online metadata suggestions:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup
+
+Run and save reports/logs:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -SaveReports
+
+Run with online suggestions and save reports/logs:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -OnlineLookup -SaveReports
+
+Run a dry run only:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -DryRun
+
+
+FLAGS / OPTIONS
+===============
+
+-OnlineLookup
+Uses public metadata sources to suggest better categories, names, and genres.
+
+Sources used:
+Wikidata for movies
+TVmaze for TV shows
+MusicBrainz for music
+Open Library for books
+
+Online lookup is only a suggestion helper.
+You still confirm suggestions before anything moves.
+
+
+-SaveReports
+Saves plan and execution reports in this Media-Prep-N-Sort folder.
+
+By default, reports are OFF so the folder stays clean.
+
+
+-DryRun
+Builds the plan and shows the summary, but does not move or rename anything.
+
+
+-NoNameReview
+Skips the step where you review proposed folder names.
+The script still asks for unclear categories unless another flag changes that.
+
+
+-TrustMediumConfidence
+Stops the script from asking about medium-confidence category guesses.
+Use this only if you want fewer prompts.
+
+
+-NonInteractive
+Runs without prompts and automatically enables dry-run behavior.
+This is mainly for testing.
+It does not move or rename anything.
+
+
+-Root "PATH"
+Lets you provide the media folder path directly in the command.
+
+Example:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -Root "Z:\Media\Completed Downloads"
+
+
+-ReportFolder "PATH"
+Changes where reports are saved when -SaveReports is used.
+
+Example:
+
+powershell -NoProfile -ExecutionPolicy Bypass -File ".\MediaPrepNSort.ps1" -SaveReports -ReportFolder "C:\Users\YourName\Desktop\MediaPrepNSortReports"
+
+
+GITHUB INSTALL-AND-RUN COMMAND
+==============================
+
+This command asks where you want to install Media-Prep-N-Sort.
+If you press Enter, it uses your Desktop.
+It then shows the final install folder and asks you to confirm before downloading.
+After downloading, it starts the script immediately.
+
+$ProgressPreference='SilentlyContinue'; [Net.ServicePointManager]::SecurityProtocol=[Net.SecurityProtocolType]::Tls12; $choice=Read-Host 'Where do you want to install Media-Prep-N-Sort? Press Enter for Desktop'; if ([string]::IsNullOrWhiteSpace($choice)) { $choice=[Environment]::GetFolderPath('Desktop') }; $choice=$choice.Trim().Trim('"'); $d=Join-Path $choice 'Media-Prep-N-Sort'; Write-Host ""; Write-Host "Install folder: $d"; $ok=Read-Host 'Are you sure? Type Y to download and run Media-Prep-N-Sort here'; if ($ok -in @('Y','y','YES','yes')) { New-Item -ItemType Directory -Force -Path $d | Out-Null; $base='https://raw.githubusercontent.com/hd9fxt7plq24vm6kcjxq2rw58y3z-cmyk/Media-Prep-N-Sort/main'; Invoke-WebRequest -UseBasicParsing -Uri "$base/MediaPrepNSort.ps1" -OutFile (Join-Path $d 'MediaPrepNSort.ps1'); Invoke-WebRequest -UseBasicParsing -Uri "$base/RUN_MEDIA_PREP_N_SORT.txt" -OutFile (Join-Path $d 'RUN_MEDIA_PREP_N_SORT.txt'); powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $d 'MediaPrepNSort.ps1') } else { Write-Host 'Install cancelled. Nothing was downloaded.' }
+
+
+UNINSTALLING
+============
+
+Delete the Media-Prep-N-Sort folder from your Desktop.
+
+That removes:
+
+MediaPrepNSort.ps1
+RUN_MEDIA_PREP_N_SORT.txt
+any optional reports/logs created with -SaveReports
+
+It does not delete your media folders.
+
+
+LIKE IT?
+========
+
+If Media-Prep-N-Sort helped you, please consider starring the GitHub repo.
+It helps other people find the project and lets me know the tool is useful.
